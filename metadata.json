@@ -1,0 +1,6 @@
+{
+  "name": "UoH Meeting Management System",
+  "description": "Centralized meeting scheduler, conflict detection, room bookings, approvals, agendas, minutes, and action items tracker for University of Haripur.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
