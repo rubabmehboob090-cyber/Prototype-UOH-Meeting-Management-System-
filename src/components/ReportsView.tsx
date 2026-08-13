@@ -1,5 +1,5 @@
 import React from 'react';
-import { Room, Meeting, Department } from '../types/index.ts';
+import { Room, Meeting, Department } from '../types/index';
 import { BarChart3, Building, FileText, Download } from 'lucide-react';
 
 interface ReportsViewProps {

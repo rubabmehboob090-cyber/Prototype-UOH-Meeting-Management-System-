@@ -2,16 +2,27 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { 
+import type { 
   Department, User, Room, Meeting, Approval, Notification, 
   MinutesOfMeeting, ActionItem, AuditLog, AttendanceRecord,
   ConflictCheckResult, ConflictDetail, SmartSuggestion, SystemStats 
-} from './src/types/index.ts';
+} from './src/types/index';
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+
+// Enable CORS for all routes
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // In-Memory Database initialized with UoH Seed Data
 const departments: Department[] = [
@@ -1069,15 +1080,25 @@ app.patch('/api/notifications/:id/read', (req, res) => {
 // Audit Logs
 app.get('/api/audit-logs', (req, res) => res.json(auditLogs));
 
+// Global Error Handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Express API Error:', err);
+  res.status(500).json({ error: err?.message || 'Internal Server Error' });
+});
+
 // ---------------- VITE MIDDLEWARE SETUP ----------------
 async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
+  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    try {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+    } catch (e) {
+      console.error('Failed to attach Vite middleware:', e);
+    }
+  } else if (!process.env.VERCEL) {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
@@ -1085,9 +1106,13 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`UoH Meeting Management System running on http://localhost:${PORT}`);
-  });
+  if (!process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`UoH Meeting Management System running on http://localhost:${PORT}`);
+    });
+  }
 }
 
 startServer();
+
+export default app;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ConflictCheckResult, SmartSuggestion } from '../types/index.ts';
+import { ConflictCheckResult, SmartSuggestion } from '../types/index';
 import { AlertTriangle, CheckCircle2, Clock, MapPin, Sparkles, UserX, Calendar } from 'lucide-react';
 
 interface ConflictWarningProps {

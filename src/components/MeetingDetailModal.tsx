@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Meeting, Room, User, MinutesOfMeeting, ActionItem, AttendanceRecord } from '../types/index.ts';
+import { Meeting, Room, User, MinutesOfMeeting, ActionItem, AttendanceRecord } from '../types/index';
 import { 
   fetchMinutes, saveMinutes, fetchAttendance, saveAttendance, 
   fetchActionItems, createActionItem 
-} from '../services/api.ts';
+} from '../services/api';
 import { 
   X, FileText, CheckCircle2, Plus, UserCheck, ListTodo 
 } from 'lucide-react';

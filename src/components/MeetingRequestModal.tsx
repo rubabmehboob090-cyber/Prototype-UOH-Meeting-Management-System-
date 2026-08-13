@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { User, Department, Room, ConflictCheckResult, SmartSuggestion } from '../types/index.ts';
-import { checkConflict, createMeeting } from '../services/api.ts';
-import { ConflictWarning } from './ConflictWarning.tsx';
+import { User, Department, Room, ConflictCheckResult, SmartSuggestion } from '../types/index';
+import { checkConflict, createMeeting } from '../services/api';
+import { ConflictWarning } from './ConflictWarning';
 import { X, Plus, Trash2, Calendar, Clock, Users, FileText, CheckCircle, ShieldAlert, Lock } from 'lucide-react';
-import { getRolePermissions } from '../utils/rbac.ts';
+import { getRolePermissions } from '../utils/rbac';
 
 interface MeetingRequestModalProps {
   isOpen: boolean;

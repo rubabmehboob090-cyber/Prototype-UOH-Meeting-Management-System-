@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { User, Department, Room, Meeting, SystemStats } from './types/index.ts';
+import { User, Department, Room, Meeting, SystemStats } from './types/index';
 import { 
   fetchUsers, fetchDepartments, fetchRooms, fetchMeetings, fetchStats 
-} from './services/api.ts';
+} from './services/api';
 
-import { Navbar } from './components/Navbar.tsx';
-import { Sidebar } from './components/Sidebar.tsx';
-import { Dashboard } from './components/Dashboard.tsx';
-import { MeetingRequestModal } from './components/MeetingRequestModal.tsx';
-import { ApprovalQueue } from './components/ApprovalQueue.tsx';
-import { CalendarView } from './components/CalendarView.tsx';
-import { RoomManager } from './components/RoomManager.tsx';
-import { ActionItemsTracker } from './components/ActionItemsTracker.tsx';
-import { MeetingDetailModal } from './components/MeetingDetailModal.tsx';
-import { ReportsView } from './components/ReportsView.tsx';
-import { AuditLogView } from './components/AuditLogView.tsx';
+import { Navbar } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
+import { Dashboard } from './components/Dashboard';
+import { MeetingRequestModal } from './components/MeetingRequestModal';
+import { ApprovalQueue } from './components/ApprovalQueue';
+import { CalendarView } from './components/CalendarView';
+import { RoomManager } from './components/RoomManager';
+import { ActionItemsTracker } from './components/ActionItemsTracker';
+import { MeetingDetailModal } from './components/MeetingDetailModal';
+import { ReportsView } from './components/ReportsView';
+import { AuditLogView } from './components/AuditLogView';
 
 export default function App() {
   const [users, setUsers] = useState<User[]>([]);

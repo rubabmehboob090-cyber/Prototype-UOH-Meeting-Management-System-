@@ -1,4 +1,4 @@
-import { User, UserRole, Meeting } from '../types/index.ts';
+import { User, UserRole, Meeting } from '../types/index';
 
 export interface RolePermissions {
   canCreateMeeting: boolean;

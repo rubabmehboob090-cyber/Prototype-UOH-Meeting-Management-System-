@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Room, Meeting, User } from '../types/index.ts';
-import { createRoom } from '../services/api.ts';
+import { Room, Meeting, User } from '../types/index';
+import { createRoom } from '../services/api';
 import { Building, Users, Shield, Plus, Lock } from 'lucide-react';
-import { getRolePermissions } from '../utils/rbac.ts';
+import { getRolePermissions } from '../utils/rbac';
 
 interface RoomManagerProps {
   rooms: Room[];

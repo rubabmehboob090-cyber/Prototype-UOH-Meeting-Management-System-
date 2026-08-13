@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ActionItem, User, Meeting } from '../types/index.ts';
-import { fetchActionItems, updateActionItemStatus } from '../services/api.ts';
+import { ActionItem, User, Meeting } from '../types/index';
+import { fetchActionItems, updateActionItemStatus } from '../services/api';
 import { ListTodo, CheckCircle2, Clock, AlertCircle, Filter, UserCheck } from 'lucide-react';
 
 interface ActionItemsTrackerProps {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { User } from '../types/index.ts';
-import { fetchApprovals, updateMeetingStatus } from '../services/api.ts';
+import { User } from '../types/index';
+import { fetchApprovals, updateMeetingStatus } from '../services/api';
 import { ShieldCheck, CheckCircle2, XCircle, AlertTriangle, Clock, MapPin, UserCheck } from 'lucide-react';
 
 interface ApprovalQueueProps {

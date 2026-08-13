@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AuditLog } from '../types/index.ts';
-import { fetchAuditLogs } from '../services/api.ts';
+import { AuditLog } from '../types/index';
+import { fetchAuditLogs } from '../services/api';
 import { History } from 'lucide-react';
 
 export const AuditLogView: React.FC = () => {

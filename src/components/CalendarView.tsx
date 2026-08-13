@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Meeting, Room, Department, User } from '../types/index.ts';
+import { Meeting, Room, Department, User } from '../types/index';
 import { Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
-import { getRolePermissions } from '../utils/rbac.ts';
+import { getRolePermissions } from '../utils/rbac';
 
 interface CalendarViewProps {
   meetings: Meeting[];

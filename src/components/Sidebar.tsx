@@ -3,8 +3,8 @@ import {
   LayoutDashboard, PlusCircle, CheckSquare, Calendar, Building, 
   ListTodo, FileText, BarChart3, History, ShieldAlert, Lock 
 } from 'lucide-react';
-import { User } from '../types/index.ts';
-import { getRolePermissions } from '../utils/rbac.ts';
+import { User } from '../types/index';
+import { getRolePermissions } from '../utils/rbac';
 
 interface SidebarProps {
   currentUser: User;

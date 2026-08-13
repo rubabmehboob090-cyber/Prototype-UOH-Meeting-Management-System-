@@ -1,10 +1,10 @@
 import React from 'react';
-import { SystemStats, Meeting, Room, User } from '../types/index.ts';
+import { SystemStats, Meeting, Room, User } from '../types/index';
 import { 
   Calendar, CheckCircle, Clock, Building, 
   Users, ArrowRight, ShieldCheck, ListTodo, Plus, UserCheck, Lock, FileText 
 } from 'lucide-react';
-import { getRolePermissions, filterMeetingsForRole } from '../utils/rbac.ts';
+import { getRolePermissions, filterMeetingsForRole } from '../utils/rbac';
 
 interface DashboardProps {
   stats: SystemStats | null;

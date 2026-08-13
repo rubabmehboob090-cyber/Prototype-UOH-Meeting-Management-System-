@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { User, Notification } from '../types/index.ts';
-import { fetchNotifications, markNotificationRead } from '../services/api.ts';
-import { getRolePermissions } from '../utils/rbac.ts';
+import { User, Notification } from '../types/index';
+import { fetchNotifications, markNotificationRead } from '../services/api';
+import { getRolePermissions } from '../utils/rbac';
 import { Bell, Shield, Calendar, ChevronDown, UserCheck, Lock } from 'lucide-react';
 
 interface NavbarProps {
