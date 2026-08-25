@@ -5,7 +5,8 @@ import { createServer as createViteServer } from 'vite';
 import type { 
   Department, User, Room, Meeting, Approval, Notification, 
   MinutesOfMeeting, ActionItem, AuditLog, AttendanceRecord,
-  ConflictCheckResult, ConflictDetail, SmartSuggestion, SystemStats 
+  ConflictCheckResult, ConflictDetail, SmartSuggestion, SystemStats,
+  ParticipantFreeSlot, GlobalClashItem
 } from './src/types/index';
 
 const app = express();
@@ -469,7 +470,8 @@ function checkMeetingConflicts(
   startTime: string,
   endTime: string,
   participantUserIds: string[],
-  ignoreMeetingId?: string
+  ignoreMeetingId?: string,
+  mode?: 'In-Person' | 'Online' | 'Hybrid'
 ): ConflictCheckResult {
   const conflicts: ConflictDetail[] = [];
 
@@ -479,8 +481,63 @@ function checkMeetingConflicts(
     return h * 60 + m;
   };
 
+  const formatTime = (mins: number) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  };
+
   const reqStart = parseMinutes(startTime);
   const reqEnd = parseMinutes(endTime);
+
+  // 0. Validation checks (Working hours 08:00 to 18:00)
+  if (reqStart < 8 * 60 || reqEnd > 18 * 60) {
+    conflicts.push({
+      type: 'buffer',
+      title: 'Outside Campus Operational Hours',
+      description: `Requested time (${startTime} - ${endTime}) is outside university operational schedule (08:00 AM - 06:00 PM).`,
+      conflictingEntityName: 'Campus Schedule',
+      severity: 'warning'
+    });
+  }
+
+  const roomObj = roomId ? rooms.find((r) => r.id === roomId) : undefined;
+
+  // 1. Room Inactive / Maintenance Check
+  if (roomObj && !roomObj.isActive) {
+    conflicts.push({
+      type: 'maintenance',
+      title: 'Venue Inactive / Maintenance',
+      description: `Room "${roomObj.name}" is currently marked inactive or under technical maintenance.`,
+      conflictingEntityName: roomObj.name,
+      severity: 'critical'
+    });
+  }
+
+  // 2. Capacity Check
+  if (roomObj && participantUserIds.length > roomObj.capacity) {
+    conflicts.push({
+      type: 'capacity',
+      title: 'Room Capacity Exceeded',
+      description: `Invited participant count (${participantUserIds.length}) exceeds maximum room capacity (${roomObj.capacity} seats) in "${roomObj.name}".`,
+      conflictingEntityName: roomObj.name,
+      severity: 'warning'
+    });
+  }
+
+  // 3. Facility requirement check for Hybrid / Online
+  if (roomObj && (mode === 'Hybrid' || mode === 'Online')) {
+    const hasVc = roomObj.facilities.some(f => f.toLowerCase().includes('vc') || f.toLowerCase().includes('video') || f.toLowerCase().includes('multimedia') || f.toLowerCase().includes('display'));
+    if (!hasVc) {
+      conflicts.push({
+        type: 'facility',
+        title: 'Missing Required VC Facilities',
+        description: `Room "${roomObj.name}" lacks verified Video Conferencing / Smart Display equipment required for ${mode} sessions.`,
+        conflictingEntityName: roomObj.name,
+        severity: 'info'
+      });
+    }
+  }
 
   // Filter existing active meetings on same date
   const activeMeetings = meetings.filter(
@@ -495,24 +552,32 @@ function checkMeetingConflicts(
     const mStart = parseMinutes(m.startTime);
     const mEnd = parseMinutes(m.endTime);
 
-    // Overlap condition: start1 < end2 && end1 > start2
+    // Exact or partial overlap condition: start1 < end2 && end1 > start2
     const isOverlapping = reqStart < mEnd && reqEnd > mStart;
 
+    // Buffer check: If same room, less than 10 mins gap between back-to-back meetings
+    const isBackToBackWithNoBuffer =
+      roomId &&
+      m.roomId === roomId &&
+      !isOverlapping &&
+      ((Math.abs(reqStart - mEnd) < 10) || (Math.abs(mStart - reqEnd) < 10));
+
     if (isOverlapping) {
-      // 1. Room Conflict
+      // 4. Room Double-Booking Conflict
       if (roomId && m.roomId === roomId) {
-        const roomObj = rooms.find((r) => r.id === roomId);
         conflicts.push({
           type: 'room',
           title: 'Room Double-Booking Conflict',
           description: `Room "${roomObj?.name || 'Selected Room'}" is already reserved for "${m.title}" during ${m.startTime} - ${m.endTime}.`,
           conflictingEntityName: roomObj?.name || 'Room',
           existingMeetingTitle: m.title,
-          existingTime: `${m.startTime} - ${m.endTime}`
+          existingTime: `${m.startTime} - ${m.endTime}`,
+          severity: 'critical',
+          conflictingMeetingId: m.id
         });
       }
 
-      // 2. Participant Conflict
+      // 5. Participant Schedule Conflict
       for (const pId of participantUserIds) {
         const isParticipantBooked = m.participants.some((p) => p.userId === pId);
         if (isParticipantBooked) {
@@ -523,12 +588,14 @@ function checkMeetingConflicts(
             description: `${userObj?.name} (${userObj?.role}) is already scheduled in meeting "${m.title}" during ${m.startTime} - ${m.endTime}.`,
             conflictingEntityName: userObj?.name || 'Participant',
             existingMeetingTitle: m.title,
-            existingTime: `${m.startTime} - ${m.endTime}`
+            existingTime: `${m.startTime} - ${m.endTime}`,
+            severity: 'critical',
+            conflictingMeetingId: m.id
           });
         }
       }
 
-      // 3. University Wide Event Conflict
+      // 6. University Wide Event Conflict
       if (m.isUniversityWideEvent) {
         conflicts.push({
           type: 'university_event',
@@ -536,29 +603,42 @@ function checkMeetingConflicts(
           description: `This slot overlaps with statutory University-Wide event "${m.title}" (${m.startTime} - ${m.endTime}).`,
           conflictingEntityName: m.title,
           existingMeetingTitle: m.title,
-          existingTime: `${m.startTime} - ${m.endTime}`
+          existingTime: `${m.startTime} - ${m.endTime}`,
+          severity: 'critical',
+          conflictingMeetingId: m.id
         });
       }
+    } else if (isBackToBackWithNoBuffer) {
+      conflicts.push({
+        type: 'buffer',
+        title: 'Zero Setup Buffer Warning',
+        description: `Tight back-to-back turnaround in "${roomObj?.name}". Previous meeting "${m.title}" ends at ${m.endTime} (minimum recommended buffer is 10 mins).`,
+        conflictingEntityName: roomObj?.name || 'Room',
+        existingMeetingTitle: m.title,
+        existingTime: `${m.startTime} - ${m.endTime}`,
+        severity: 'info',
+        conflictingMeetingId: m.id
+      });
     }
   }
 
   // Generate Smart Suggestions if conflict found
   const suggestions: SmartSuggestion[] = [];
+  const requestedDuration = reqEnd - reqStart;
 
   if (conflicts.length > 0) {
     // 1. Suggest alternative available rooms for same date & time slot
-    const requestedRoom = rooms.find((r) => r.id === roomId);
-    const targetCapacity = requestedRoom ? requestedRoom.capacity : 20;
+    const targetCapacity = roomObj ? roomObj.capacity : participantUserIds.length || 20;
 
     const availableRooms = rooms.filter((r) => {
-      if (!r.isActive) return false;
+      if (!r.isActive || r.id === roomId) return false;
       // Check if this room has overlap
       const hasRoomOverlap = activeMeetings.some((m) => {
         const mStart = parseMinutes(m.startTime);
         const mEnd = parseMinutes(m.endTime);
         return m.roomId === r.id && reqStart < mEnd && reqEnd > mStart;
       });
-      return !hasRoomOverlap && r.capacity >= targetCapacity - 10;
+      return !hasRoomOverlap && r.capacity >= Math.max(participantUserIds.length, targetCapacity - 10);
     });
 
     for (const altRoom of availableRooms.slice(0, 3)) {
@@ -569,52 +649,236 @@ function checkMeetingConflicts(
         date: date,
         startTime: startTime,
         endTime: endTime,
-        reason: `Room "${altRoom.name}" (Capacity: ${altRoom.capacity}) is 100% free at ${startTime} - ${endTime}`
+        reason: `Room "${altRoom.name}" (Capacity: ${altRoom.capacity}) in ${altRoom.building} is 100% free at ${startTime} - ${endTime}`
       });
     }
 
-    // 2. Suggest alternative time slot (+2 hours later) for same room if available
-    if (requestedRoom) {
-      const shiftHours = 2;
-      const newStartMins = reqStart + shiftHours * 60;
-      const newEndMins = reqEnd + shiftHours * 60;
+    // 2. Suggest alternative time slot for same room if requested
+    if (roomObj && roomObj.isActive) {
+      const candidateStartHours = [9, 11, 14, 15, 16];
+      for (const startH of candidateStartHours) {
+        const slotStart = startH * 60;
+        const slotEnd = slotStart + requestedDuration;
+        if (slotEnd <= 17 * 60 && (slotStart !== reqStart)) {
+          const hasOverlap = activeMeetings.some((m) => {
+            const mStart = parseMinutes(m.startTime);
+            const mEnd = parseMinutes(m.endTime);
+            // Check room overlap or participant overlap
+            const roomColl = m.roomId === roomId && slotStart < mEnd && slotEnd > mStart;
+            const partColl = m.participants.some(p => participantUserIds.includes(p.userId)) && slotStart < mEnd && slotEnd > mStart;
+            return roomColl || partColl;
+          });
 
-      if (newEndMins <= 17 * 60) {
-        // within working hours 5:00 PM
-        const formatTime = (mins: number) => {
-          const h = Math.floor(mins / 60);
-          const m = mins % 60;
-          return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-        };
-        const altStart = formatTime(newStartMins);
-        const altEnd = formatTime(newEndMins);
+          if (!hasOverlap) {
+            const altStartStr = formatTime(slotStart);
+            const altEndStr = formatTime(slotEnd);
+            suggestions.push({
+              roomId: roomObj.id,
+              roomName: roomObj.name,
+              capacity: roomObj.capacity,
+              date: date,
+              startTime: altStartStr,
+              endTime: altEndStr,
+              reason: `Shift slot to ${altStartStr} - ${altEndStr} in "${roomObj.name}" (Zero conflicts across all participants)`
+            });
+            if (suggestions.length >= 4) break;
+          }
+        }
+      }
+    }
+  }
 
-        const hasAltSlotOverlap = activeMeetings.some((m) => {
-          const mStart = parseMinutes(m.startTime);
-          const mEnd = parseMinutes(m.endTime);
-          return m.roomId === roomId && newStartMins < mEnd && newEndMins > mStart;
+  // Calculate Participant Availability Slots
+  const participantAvailability: ParticipantFreeSlot[] = participantUserIds.map((pId) => {
+    const userObj = users.find((u) => u.id === pId);
+    const userMeetings = activeMeetings.filter((m) => m.participants.some((p) => p.userId === pId));
+    
+    const busyIntervals = userMeetings.map((m) => ({
+      start: m.startTime,
+      end: m.endTime,
+      meetingTitle: m.title
+    }));
+
+    return {
+      userId: pId,
+      userName: userObj?.name || 'User',
+      busyIntervals,
+      freeIntervals: [
+        { start: '09:00', end: '17:00' } // simplified default work day window
+      ]
+    };
+  });
+
+  return {
+    hasConflict: conflicts.some(c => c.severity === 'critical' || c.severity === 'warning'),
+    conflicts,
+    suggestions,
+    participantAvailability
+  };
+}
+
+// Global System Clash Scanner Function
+function scanAllSystemClashes(): GlobalClashItem[] {
+  const globalClashes: GlobalClashItem[] = [];
+  const processedPairs = new Set<string>();
+
+  const activeMeetings = meetings.filter(
+    (m) => m.status !== 'Rejected' && m.status !== 'Cancelled'
+  );
+
+  const parseMinutes = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  for (let i = 0; i < activeMeetings.length; i++) {
+    const m1 = activeMeetings[i];
+    const m1Start = parseMinutes(m1.startTime);
+    const m1End = parseMinutes(m1.endTime);
+
+    // 1. Capacity check for m1
+    if (m1.roomId) {
+      const room = rooms.find((r) => r.id === m1.roomId);
+      if (room && m1.participants.length > room.capacity) {
+        globalClashes.push({
+          id: `clash-cap-${m1.id}`,
+          meeting1: m1,
+          clashType: 'capacity',
+          severity: 'warning',
+          title: `Room Overcapacity in ${room.name}`,
+          description: `Meeting "${m1.title}" has ${m1.participants.length} participants but room "${room.name}" only holds ${room.capacity} seats.`,
+          conflictingEntityName: room.name,
+          date: m1.date,
+          timeWindow: `${m1.startTime} - ${m1.endTime}`,
+          suggestions: rooms
+            .filter((r) => r.capacity >= m1.participants.length && r.isActive && r.id !== room.id)
+            .slice(0, 2)
+            .map((alt) => ({
+              roomId: alt.id,
+              roomName: alt.name,
+              capacity: alt.capacity,
+              date: m1.date,
+              startTime: m1.startTime,
+              endTime: m1.endTime,
+              reason: `Upgrade to larger hall "${alt.name}" (Capacity: ${alt.capacity})`
+            }))
         });
+      }
+    }
 
-        if (!hasAltSlotOverlap) {
-          suggestions.push({
-            roomId: requestedRoom.id,
-            roomName: requestedRoom.name,
-            capacity: requestedRoom.capacity,
-            date: date,
-            startTime: altStart,
-            endTime: altEnd,
-            reason: `Shift time slot to ${altStart} - ${altEnd} on the same day in ${requestedRoom.name}`
+    for (let j = i + 1; j < activeMeetings.length; j++) {
+      const m2 = activeMeetings[j];
+      if (m1.date !== m2.date) continue;
+
+      const pairKey = [m1.id, m2.id].sort().join(':::');
+      if (processedPairs.has(pairKey)) continue;
+
+      const m2Start = parseMinutes(m2.startTime);
+      const m2End = parseMinutes(m2.endTime);
+
+      const isOverlapping = m1Start < m2End && m1End > m2Start;
+
+      if (isOverlapping) {
+        // Room Double-Booking Clash
+        if (m1.roomId && m2.roomId && m1.roomId === m2.roomId) {
+          processedPairs.add(pairKey);
+          const room = rooms.find((r) => r.id === m1.roomId);
+          const conflictRes = checkMeetingConflicts(
+            m2.roomId,
+            m2.date,
+            m2.startTime,
+            m2.endTime,
+            m2.participants.map((p) => p.userId),
+            m2.id
+          );
+
+          globalClashes.push({
+            id: `clash-room-${m1.id}-${m2.id}`,
+            meeting1: m1,
+            meeting2: m2,
+            clashType: 'room',
+            severity: 'critical',
+            title: `Room Double-Booking: ${room?.name || 'Venue'}`,
+            description: `Simultaneous room booking between "${m1.title}" (${m1.startTime}-${m1.endTime}) and "${m2.title}" (${m2.startTime}-${m2.endTime}).`,
+            conflictingEntityName: room?.name || 'Room',
+            date: m1.date,
+            timeWindow: `${Math.max(m1Start, m2Start) === m1Start ? m1.startTime : m2.startTime} - ${Math.min(m1End, m2End) === m1End ? m1.endTime : m2.endTime}`,
+            suggestions: conflictRes.suggestions
+          });
+        }
+
+        // Participant Overlap Clash
+        const sharedParticipants = m1.participants.filter((p1) =>
+          m2.participants.some((p2) => p2.userId === p1.userId)
+        );
+
+        if (sharedParticipants.length > 0) {
+          processedPairs.add(pairKey);
+          const userNames = sharedParticipants
+            .map((p) => users.find((u) => u.id === p.userId)?.name)
+            .filter(Boolean)
+            .join(', ');
+
+          globalClashes.push({
+            id: `clash-part-${m1.id}-${m2.id}`,
+            meeting1: m1,
+            meeting2: m2,
+            clashType: 'participant',
+            severity: 'critical',
+            title: `Participant Schedule Conflict (${sharedParticipants.length} member${sharedParticipants.length > 1 ? 's' : ''})`,
+            description: `Personnel [${userNames}] assigned to both "${m1.title}" (${m1.startTime}-${m1.endTime}) and "${m2.title}" (${m2.startTime}-${m2.endTime}).`,
+            conflictingEntityName: userNames,
+            date: m1.date,
+            timeWindow: `${m1.startTime} - ${m1.endTime}`,
+            suggestions: [
+              {
+                roomId: m2.roomId || 'room-1',
+                roomName: rooms.find(r => r.id === m2.roomId)?.name || 'Current Room',
+                capacity: 25,
+                date: m2.date,
+                startTime: '15:30',
+                endTime: '17:00',
+                reason: `Reschedule "${m2.title}" to afternoon slot (15:30 - 17:00) when all participants are free.`
+              }
+            ]
+          });
+        }
+
+        // Statutory Event Overlap
+        if ((m1.isUniversityWideEvent || m2.isUniversityWideEvent) && !processedPairs.has(pairKey)) {
+          processedPairs.add(pairKey);
+          const statutoryMeeting = m1.isUniversityWideEvent ? m1 : m2;
+          const routineMeeting = m1.isUniversityWideEvent ? m2 : m1;
+
+          globalClashes.push({
+            id: `clash-stat-${m1.id}-${m2.id}`,
+            meeting1: statutoryMeeting,
+            meeting2: routineMeeting,
+            clashType: 'university_event',
+            severity: 'critical',
+            title: `Statutory University-Wide Event Lockout`,
+            description: `Routine meeting "${routineMeeting.title}" overlaps with mandatory campus event "${statutoryMeeting.title}".`,
+            conflictingEntityName: statutoryMeeting.title,
+            date: m1.date,
+            timeWindow: `${statutoryMeeting.startTime} - ${statutoryMeeting.endTime}`,
+            suggestions: [
+              {
+                roomId: routineMeeting.roomId || 'room-1',
+                roomName: rooms.find(r => r.id === routineMeeting.roomId)?.name || 'Venue',
+                capacity: 20,
+                date: routineMeeting.date,
+                startTime: '16:00',
+                endTime: '17:30',
+                reason: `Move routine meeting "${routineMeeting.title}" to post-statutory session (16:00 - 17:30).`
+              }
+            ]
           });
         }
       }
     }
   }
 
-  return {
-    hasConflict: conflicts.length > 0,
-    conflicts,
-    suggestions
-  };
+  return globalClashes;
 }
 
 // ---------------- REST API ENDPOINTS ----------------
@@ -663,16 +927,51 @@ app.post('/api/rooms', (req, res) => {
 
 // Conflict Detection Endpoint
 app.post('/api/meetings/check-conflict', (req, res) => {
-  const { roomId, date, startTime, endTime, participantUserIds, ignoreMeetingId } = req.body;
+  const { roomId, date, startTime, endTime, participantUserIds, ignoreMeetingId, mode } = req.body;
   const result = checkMeetingConflicts(
     roomId,
     date,
     startTime,
     endTime,
     participantUserIds || [],
-    ignoreMeetingId
+    ignoreMeetingId,
+    mode
   );
   res.json(result);
+});
+
+// Global Clash Audit & Scanner Endpoint
+app.get('/api/clashes/scan', (req, res) => {
+  const clashes = scanAllSystemClashes();
+  res.json(clashes);
+});
+
+// 1-Click Clash Auto-Resolver
+app.post('/api/clashes/auto-resolve', (req, res) => {
+  const { meetingId, newRoomId, newDate, newStartTime, newEndTime } = req.body;
+  const meeting = meetings.find((m) => m.id === meetingId);
+  if (!meeting) {
+    return res.status(404).json({ error: 'Meeting not found' });
+  }
+
+  if (newRoomId) meeting.roomId = newRoomId;
+  if (newDate) meeting.date = newDate;
+  if (newStartTime) meeting.startTime = newStartTime;
+  if (newEndTime) meeting.endTime = newEndTime;
+  meeting.updatedAt = new Date().toISOString().split('T')[0];
+
+  // Add audit log entry
+  auditLogs.unshift({
+    id: `log-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    userId: 'system-resolver',
+    userName: 'UoH Conflict Engine',
+    action: 'Auto-Resolved Clash',
+    details: `Auto-adjusted schedule for "${meeting.title}" to ${meeting.date} ${meeting.startTime}-${meeting.endTime} in room ${meeting.roomId}`,
+    ipAddress: '127.0.0.1'
+  });
+
+  res.json({ success: true, updatedMeeting: meeting });
 });
 
 // Meetings CRUD
