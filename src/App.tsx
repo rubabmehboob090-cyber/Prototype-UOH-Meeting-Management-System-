@@ -55,7 +55,7 @@ export default function App() {
       setStats(sData);
 
       if (!currentUser && uList.length > 0) {
-        // Default to Dr. Shafiq Ahmed (Super Admin / Assistant Registrar)
+        // Default to Dr. Ahmed (Super Admin / Assistant Registrar)
         setCurrentUser(uList[0]);
       }
     } catch (e) {

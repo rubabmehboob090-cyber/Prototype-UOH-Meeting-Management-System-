@@ -1,0 +1,114 @@
+/* 
+ * Custom Stylesheet - University Meeting Management System (UoH-MMS)
+ * Built to complement Bootstrap 5 with clean typographic hierarchy and modern contrast
+ */
+
+:root {
+    --primary-color: #1e3a8a; /* University Deep Blue */
+    --primary-hover: #172554;
+    --accent-color: #f59e0b;  /* University Gold/Amber */
+    --surface-bg: #f8fafc;
+    --card-border: #e2e8f0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1e293b;
+    background-color: var(--surface-bg);
+}
+
+.fs-7 { font-size: 0.85rem !important; }
+.fs-8 { font-size: 0.75rem !important; }
+
+.navbar.bg-primary {
+    background-color: var(--primary-color) !important;
+}
+
+.avatar-circle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+}
+
+.sidebar-wrapper {
+    min-height: calc(100vh - 56px);
+}
+
+.main-content {
+    min-height: calc(100vh - 56px);
+}
+
+.card {
+    border: 1px solid var(--card-border);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    background-color: #ffffff;
+}
+
+.card-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--card-border);
+    padding: 1rem 1.25rem;
+    font-weight: 600;
+}
+
+.table > :not(caption) > * > * {
+    padding: 0.75rem 1rem;
+}
+
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+}
+
+.status-badge-draft { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.status-badge-pending_approval { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.status-badge-approved { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.status-badge-rejected { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.status-badge-cancelled { background-color: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+.status-badge-completed { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+
+.conflict-alert-box {
+    border-left: 4px solid #ef4444;
+    background-color: #fef2f2;
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.timeline-step {
+    position: relative;
+    padding-left: 1.75rem;
+    padding-bottom: 1.5rem;
+}
+.timeline-step:last-child {
+    padding-bottom: 0;
+}
+.timeline-step::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 24px;
+    bottom: 0;
+    width: 2px;
+    background-color: #e2e8f0;
+}
+.timeline-step:last-child::before {
+    display: none;
+}
+.timeline-dot {
+    position: absolute;
+    left: 0;
+    top: 4px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: #cbd5e1;
+    border: 2px solid #ffffff;
+}
+.timeline-dot.active {
+    background-color: #22c55e;
+}

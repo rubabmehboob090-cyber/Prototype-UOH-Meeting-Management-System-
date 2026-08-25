@@ -41,8 +41,8 @@ const departments: Department[] = [
 const users: User[] = [
   {
     id: 'user-1',
-    name: 'Dr. Shafiq Ahmed',
-    email: 'shafiq.ahmed@uoh.edu.pk',
+    name: 'Dr. Ahmed',
+    email: 'ahmed@uoh.edu.pk',
     role: 'Super Admin',
     departmentId: 'dept-1',
     designation: 'Assistant Registrar (Meetings)',
