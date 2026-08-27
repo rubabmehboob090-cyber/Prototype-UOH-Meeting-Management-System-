@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   LayoutDashboard, PlusCircle, CheckSquare, Calendar, Building, 
-  ListTodo, FileText, BarChart3, History, ShieldAlert, Lock, Zap 
+  ListTodo, FileText, BarChart3, History, ShieldAlert, Lock 
 } from 'lucide-react';
 import { User } from '../types/index';
 import { getRolePermissions } from '../utils/rbac';
@@ -11,15 +11,13 @@ interface SidebarProps {
   activeView: string;
   onNavigate: (view: string) => void;
   pendingApprovalsCount: number;
-  activeClashesCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   currentUser,
   activeView,
   onNavigate,
-  pendingApprovalsCount,
-  activeClashesCount = 0
+  pendingApprovalsCount
 }) => {
   const permissions = getRolePermissions(currentUser.role);
 
@@ -27,18 +25,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'schedule', label: 'Request Meeting', icon: PlusCircle, badge: 'New' },
     { 
-      id: 'clash-detector', 
-      label: 'Clash Detection Engine', 
-      icon: Zap, 
-      count: activeClashesCount,
-      countBadgeColor: 'bg-rose-500'
-    },
-    { 
       id: 'approvals', 
       label: 'Approval Queue', 
       icon: CheckSquare, 
-      count: pendingApprovalsCount,
-      countBadgeColor: 'bg-amber-500'
+      count: pendingApprovalsCount 
     },
     { id: 'calendar', label: 'Master Calendar', icon: Calendar },
     { id: 'rooms', label: 'Room Management', icon: Building },
@@ -91,12 +81,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               {item.count !== undefined && item.count > 0 && (
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                  isActive ? 'bg-white text-indigo-700' : (item.countBadgeColor ? `${item.countBadgeColor} text-white` : 'bg-amber-500 text-white')
+                  isActive ? 'bg-white text-indigo-700' : 'bg-amber-500 text-white'
                 }`}>
                   {item.count}
                 </span>
               )}
-              {item.badge && !item.count && (
+              {item.badge && (
                 <span className={`px-1.5 py-0.2 text-[9px] rounded font-bold uppercase ${
                   isActive ? 'bg-indigo-500 text-white' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                 }`}>

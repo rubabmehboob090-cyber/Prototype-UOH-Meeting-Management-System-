@@ -152,14 +152,12 @@ export interface AuditLog {
 }
 
 export interface ConflictDetail {
-  type: 'room' | 'participant' | 'university_event' | 'capacity' | 'facility' | 'maintenance' | 'buffer';
+  type: 'room' | 'participant' | 'university_event';
   title: string;
   description: string;
   conflictingEntityName: string;
   existingMeetingTitle?: string;
   existingTime?: string;
-  severity?: 'critical' | 'warning' | 'info';
-  conflictingMeetingId?: string;
 }
 
 export interface SmartSuggestion {
@@ -172,31 +170,9 @@ export interface SmartSuggestion {
   reason: string;
 }
 
-export interface ParticipantFreeSlot {
-  userId: string;
-  userName: string;
-  freeIntervals: { start: string; end: string }[];
-  busyIntervals: { start: string; end: string; meetingTitle: string }[];
-}
-
 export interface ConflictCheckResult {
   hasConflict: boolean;
   conflicts: ConflictDetail[];
-  suggestions: SmartSuggestion[];
-  participantAvailability?: ParticipantFreeSlot[];
-}
-
-export interface GlobalClashItem {
-  id: string;
-  meeting1: Meeting;
-  meeting2?: Meeting;
-  clashType: 'room' | 'participant' | 'university_event' | 'capacity' | 'buffer';
-  severity: 'critical' | 'warning' | 'info';
-  title: string;
-  description: string;
-  conflictingEntityName: string;
-  date: string;
-  timeWindow: string;
   suggestions: SmartSuggestion[];
 }
 

@@ -69,7 +69,7 @@ export const MeetingRequestModal: React.FC<MeetingRequestModalProps> = ({
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [roomId, date, startTime, endTime, selectedParticipantIds, mode, isOpen]);
+  }, [roomId, date, startTime, endTime, selectedParticipantIds, isOpen]);
 
   const runConflictCheck = async () => {
     setIsCheckingConflict(true);
@@ -79,8 +79,7 @@ export const MeetingRequestModal: React.FC<MeetingRequestModalProps> = ({
         date,
         startTime,
         endTime,
-        participantUserIds: selectedParticipantIds,
-        mode
+        participantUserIds: selectedParticipantIds
       });
       setConflictResult(res);
     } catch (e) {

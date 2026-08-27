@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { User, Department, Room, Meeting, SystemStats, GlobalClashItem } from './types/index';
+import { User, Department, Room, Meeting, SystemStats } from './types/index';
 import { 
-  fetchUsers, fetchDepartments, fetchRooms, fetchMeetings, fetchStats, scanClashes 
+  fetchUsers, fetchDepartments, fetchRooms, fetchMeetings, fetchStats 
 } from './services/api';
 
 import { Navbar } from './components/Navbar';
@@ -15,7 +15,6 @@ import { ActionItemsTracker } from './components/ActionItemsTracker';
 import { MeetingDetailModal } from './components/MeetingDetailModal';
 import { ReportsView } from './components/ReportsView';
 import { AuditLogView } from './components/AuditLogView';
-import { ClashDetectorView } from './components/ClashDetectorView';
 
 export default function App() {
   const [users, setUsers] = useState<User[]>([]);
@@ -23,7 +22,6 @@ export default function App() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [stats, setStats] = useState<SystemStats | null>(null);
-  const [clashes, setClashes] = useState<GlobalClashItem[]>([]);
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeView, setActiveView] = useState<string>('dashboard');
@@ -42,13 +40,12 @@ export default function App() {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [uList, dList, rList, mList, sData, cList] = await Promise.all([
+      const [uList, dList, rList, mList, sData] = await Promise.all([
         fetchUsers(),
         fetchDepartments(),
         fetchRooms(),
         fetchMeetings(),
-        fetchStats(),
-        scanClashes()
+        fetchStats()
       ]);
 
       setUsers(uList);
@@ -56,7 +53,6 @@ export default function App() {
       setRooms(rList);
       setMeetings(mList);
       setStats(sData);
-      setClashes(cList);
 
       if (!currentUser && uList.length > 0) {
         // Default to Dr. Ahmed (Super Admin / Assistant Registrar)
@@ -71,10 +67,9 @@ export default function App() {
 
   const reloadMeetingsAndStats = async () => {
     try {
-      const [mList, sData, cList] = await Promise.all([fetchMeetings(), fetchStats(), scanClashes()]);
+      const [mList, sData] = await Promise.all([fetchMeetings(), fetchStats()]);
       setMeetings(mList);
       setStats(sData);
-      setClashes(cList);
     } catch (e) {
       console.error(e);
     }
@@ -106,7 +101,6 @@ export default function App() {
   }
 
   const pendingApprovalsCount = meetings.filter((m) => m.status === 'Pending Approval').length;
-  const activeClashesCount = clashes.length;
 
   return (
     <div className="min-h-screen bg-[#F1F5F9] text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
@@ -141,7 +135,6 @@ export default function App() {
             }
           }}
           pendingApprovalsCount={pendingApprovalsCount}
-          activeClashesCount={activeClashesCount}
         />
 
         {/* Content View Container */}
@@ -158,23 +151,6 @@ export default function App() {
               }}
               onSelectMeeting={(m) => setSelectedMeetingDetail(m)}
               onNavigate={(v) => setActiveView(v)}
-              activeClashesCount={activeClashesCount}
-            />
-          )}
-
-          {activeView === 'clash-detector' && (
-            <ClashDetectorView
-              rooms={rooms}
-              meetings={meetings}
-              users={users}
-              departments={departments}
-              currentUser={currentUser}
-              onRefreshData={reloadMeetingsAndStats}
-              onSelectMeeting={(m) => setSelectedMeetingDetail(m)}
-              onOpenNewMeeting={() => {
-                setModalRoomId(undefined);
-                setIsNewMeetingModalOpen(true);
-              }}
             />
           )}
 

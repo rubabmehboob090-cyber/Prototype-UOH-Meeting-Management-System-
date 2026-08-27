@@ -14,7 +14,6 @@ interface DashboardProps {
   onOpenNewMeeting: () => void;
   onSelectMeeting: (meeting: Meeting) => void;
   onNavigate: (view: string) => void;
-  activeClashesCount?: number;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -24,8 +23,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   currentUser,
   onOpenNewMeeting,
   onSelectMeeting,
-  onNavigate,
-  activeClashesCount = 0
+  onNavigate
 }) => {
   const permissions = getRolePermissions(currentUser.role);
   const roleMeetings = filterMeetingsForRole(meetings, currentUser);
@@ -156,38 +154,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="text-2xl font-bold text-slate-900">{stats?.activeActionItems || 5}</div>
             <div className="text-[10px] text-slate-500 mt-1">Assigned Tasks</div>
           </div>
-        </div>
-      )}
-
-      {/* Automated Clash Engine Alert Banner */}
-      {activeClashesCount > 0 && (
-        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-100 border border-rose-300 text-rose-700 flex items-center justify-center flex-shrink-0">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h4 className="font-bold text-sm text-rose-900">
-                  Automated Clash Detection: {activeClashesCount} Conflict{activeClashesCount > 1 ? 's' : ''} Detected
-                </h4>
-                <span className="text-[10px] bg-rose-200 text-rose-900 font-bold px-2 py-0.5 rounded-full">
-                  Action Required
-                </span>
-              </div>
-              <p className="text-xs text-rose-700 mt-0.5">
-                Overlapping room double-bookings or participant schedule conflicts exist across campus schedules.
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => onNavigate('clash-detector')}
-            className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-xs flex items-center space-x-1.5 transition-colors cursor-pointer self-start sm:self-auto"
-          >
-            <span>Launch Clash Resolver</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
         </div>
       )}
 

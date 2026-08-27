@@ -1,7 +1,7 @@
 import { 
   User, Department, Room, Meeting, Approval, Notification, 
   MinutesOfMeeting, ActionItem, AuditLog, AttendanceRecord, 
-  ConflictCheckResult, SystemStats, GlobalClashItem 
+  ConflictCheckResult, SystemStats 
 } from '../types/index';
 import { 
   seedDepartments, seedUsers, seedRooms, seedMeetings, seedStats 
@@ -84,7 +84,6 @@ export async function checkConflict(params: {
   endTime: string;
   participantUserIds?: string[];
   ignoreMeetingId?: string;
-  mode?: 'In-Person' | 'Online' | 'Hybrid';
 }): Promise<ConflictCheckResult> {
   try {
     const res = await fetch(`${API_BASE}/meetings/check-conflict`, {
@@ -96,45 +95,6 @@ export async function checkConflict(params: {
     return await res.json();
   } catch (err) {
     return { hasConflict: false, conflicts: [], suggestions: [] };
-  }
-}
-
-export async function scanClashes(): Promise<GlobalClashItem[]> {
-  try {
-    const res = await fetch(`${API_BASE}/clashes/scan`);
-    if (!res.ok) throw new Error('Failed to scan clashes');
-    return await res.json();
-  } catch (err) {
-    console.warn('API /clashes/scan fetch failed:', err);
-    return [];
-  }
-}
-
-export async function autoResolveClash(params: {
-  meetingId: string;
-  newRoomId?: string;
-  newDate?: string;
-  newStartTime?: string;
-  newEndTime?: string;
-}): Promise<{ success: boolean; updatedMeeting: Meeting }> {
-  try {
-    const res = await fetch(`${API_BASE}/clashes/auto-resolve`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params)
-    });
-    if (!res.ok) throw new Error('Failed to auto-resolve clash');
-    return await res.json();
-  } catch (err) {
-    const found = seedMeetings.find((m) => m.id === params.meetingId);
-    if (found) {
-      if (params.newRoomId) found.roomId = params.newRoomId;
-      if (params.newDate) found.date = params.newDate;
-      if (params.newStartTime) found.startTime = params.newStartTime;
-      if (params.newEndTime) found.endTime = params.newEndTime;
-      return { success: true, updatedMeeting: found };
-    }
-    throw new Error('Meeting not found for resolution');
   }
 }
 
